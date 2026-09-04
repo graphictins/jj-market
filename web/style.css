@@ -1,0 +1,17 @@
+@import url('https://fonts.googleapis.com/css2?family=Teko:wght@600;700&family=Kanit:wght@400;600;800&display=swap');
+
+body { 
+    font-family: sans-serif; 
+    padding: 0; 
+    margin: 0;
+    background-color: #ff0000;
+}
+
+.app-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    background-color: #094209;
+}  
