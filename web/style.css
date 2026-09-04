@@ -4,13 +4,13 @@
     --color-app-bg: #f3f3f3;
     --color-container-bg: #f3f3f3;
     --gap-container: 0.5rem;
-    --radius-container: 0.5rem;
+    --radius-container: 0.3rem;
 }
 
 .roboto-mono {
   font-family: "Roboto Mono", monospace;
   font-optical-sizing: auto;
-  font-weight: 700;
+  font-weight: 450;
   font-style: normal;
 }
 
