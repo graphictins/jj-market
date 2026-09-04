@@ -1,21 +1,46 @@
 
 
-:root[data-theme="dark"] {
-    --color-gap-bg: #ffffff;
+:root {
+    --color-app-bg: #f3f3f3;
+    --color-container-bg: #f3f3f3;
+    --gap-container: 0.5rem;
+    --radius-container: 0.5rem;
 }
 
-@import url('https://fonts.googleapis.com/css2?family=Teko:wght@600;700&family=Kanit:wght@400;600;800&display=swap');
-
-* {
-    border-radius: 10px;
+.roboto-mono {
+  font-family: "Roboto Mono", monospace;
+  font-optical-sizing: auto;
+  font-weight: 700;
+  font-style: normal;
 }
+
+.container {
+    border-radius: var(--radius-container);
+    background-color: var(--color-container-bg);
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    /* align-items: center; */
+    
+    padding: 0.8rem;
+    border: 1px solid #3c3c3c;
+    /* background-image: url(assets/grid4.png); */
+    /* background-size: 128px; */
+    /* background-position: center; */
+}
+
+p {
+    margin: 0;
+    color: #3c3c3c;
+}
+
 body { 
     box-sizing: border-box;
     font-family: sans-serif; 
-    padding: 4px; 
+    padding: var(--gap-container);
     margin: 0;
-    background-color: #6d3ab1;
-    background-image: url("assets/grid4.png");
+    background-color: var(--color-app-bg);
+    /* background-image: url("assets/grid4.png"); */
     background-size: 128px 128px;
     background-repeat: repeat;
 
@@ -24,36 +49,36 @@ body {
     display: flex;
     flex-direction: row;
 
-    gap: 4px;
+    gap: var(--gap-container);
 }
 
 
-.left-panel,
-.right-panel {
+.container-left,
+.container-right {
     flex: 1;
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: var(--gap-container);
 }
 
-.left-panel .panel-top,
-.right-panel .panel-top {
+.container-left .container-top,
+.container-right .container-top,
+.container-left .container-bottom,
+.container-right .container-bottom {
     flex: 1;
-    background-color: var(--color-content-);
 }
 
-.left-panel .panel-bottom,
-.right-panel .panel-bottom {
+/* .container-left .container-bottom,
+.container-right .container-bottom {
     flex: 1;
-    background-color: #181818;
-}
+    background-color: var(--color-container-bg);
+} */
 
-.center-content {
+.container-center {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     width: 60%;
-    background-color: #181818;
     
 }
