@@ -1,17 +1,59 @@
-@import url('https://fonts.googleapis.com/css2?family=Teko:wght@600;700&family=Kanit:wght@400;600;800&display=swap');
 
-body { 
-    font-family: sans-serif; 
-    padding: 0; 
-    margin: 0;
-    background-color: #ff0000;
+
+:root[data-theme="dark"] {
+    --color-gap-bg: #ffffff;
 }
 
-.app-content {
+@import url('https://fonts.googleapis.com/css2?family=Teko:wght@600;700&family=Kanit:wght@400;600;800&display=swap');
+
+* {
+    border-radius: 10px;
+}
+body { 
+    box-sizing: border-box;
+    font-family: sans-serif; 
+    padding: 4px; 
+    margin: 0;
+    background-color: #6d3ab1;
+    background-image: url("assets/grid4.png");
+    background-size: 128px 128px;
+    background-repeat: repeat;
+
+    height: 100dvh;
+
+    display: flex;
+    flex-direction: row;
+
+    gap: 4px;
+}
+
+
+.left-panel,
+.right-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.left-panel .panel-top,
+.right-panel .panel-top {
+    flex: 1;
+    background-color: var(--color-content-);
+}
+
+.left-panel .panel-bottom,
+.right-panel .panel-bottom {
+    flex: 1;
+    background-color: #181818;
+}
+
+.center-content {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    height: 100vh;
-    background-color: #094209;
-}  
+    width: 60%;
+    background-color: #181818;
+    
+}
