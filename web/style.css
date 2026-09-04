@@ -10,7 +10,7 @@
 .roboto-mono {
   font-family: "Roboto Mono", monospace;
   font-optical-sizing: auto;
-  font-weight: 700;
+  font-weight: 1rem;
   font-style: normal;
 }
 
@@ -80,5 +80,22 @@ body {
     align-items: center;
     justify-content: center;
     width: 60%;
+    position: relative;
     
 }
+
+/* ===== JJCOIN GRAPH ===== */
+#jjcoin-canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
+}
+
+.container-right .container-bottom button {
+    margin-top: 0.6rem;
+    width: 100%;
+    cursor: pointer;
+}
+/* ===== /JJCOIN GRAPH ===== */
