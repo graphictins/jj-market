@@ -19,6 +19,18 @@
     font-weight: 900;
 }
 
+#news-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+#news-list p {
+    margin: 0;
+    padding-left: 0.6rem;
+    border-left: 3px solid #3c3c3c;
+}
+
 .container {
     border-radius: var(--radius-container);
     background-color: var(--color-container-bg);

@@ -7,6 +7,16 @@ c.width = 800; c.height = 480;
 
 function send(a) { window.chrome.webview.postMessage({ action: a }); }
 function showResult(t) { document.getElementById('result').textContent = t; }
+function setNews(list) {
+    const box = document.getElementById('news-list');
+    box.textContent = '';
+    list.forEach(t => {
+        const p = document.createElement('p');
+        p.className = 'roboto-mono';
+        p.textContent = t;
+        box.appendChild(p);
+    });
+}
 function setPrice(v) { document.getElementById('jjcoin-price').textContent = Number(v).toFixed(2); }
 function setPortfolio(cash, jjcoin, jjcoinAmount) {
     document.getElementById('cash').textContent = cash;

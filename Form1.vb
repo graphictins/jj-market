@@ -21,7 +21,7 @@ Public Class Form1
 
     Private Sub NextTick()
         Dim pull = (targetPrice - jjcoinPrice) * pullStrength
-        jjcoinPrice += pull + (rng.NextDouble() - 0.5) * 2 * noiseStrength
+        jjcoinPrice += pull + (rng.NextDouble() - 0.5) * 2 * noiseStrength + NewsDrift()
         prices.Add(jjcoinPrice)
         If prices.Count > 100 Then prices.RemoveAt(0)
     End Sub
@@ -67,6 +67,70 @@ Public Class Form1
                 PushPortfolio()
             End If
         End Using
+    End Sub
+
+#End Region
+
+#Region "News"
+
+    Private WithEvents newsTimer As New Timer
+    Private newsPressure As Double = 0.0
+    Private newsDecay As Double = 0.9
+    Private recentNews As New List(Of String)
+    Private newsTemplates As New List(Of (headline As String, good As Boolean))
+
+    Public Sub NewsStart()
+        FillTemplates()
+        RandomizeInterval()
+        newsTimer.Start()
+    End Sub
+
+    Private Sub FillTemplates()
+        newsTemplates = New List(Of (String, Boolean)) From {
+            ("JJCoin whale buys $50M of the coin", True),
+            ("JJCoin listed on major exchange", True),
+            ("Starbucks now accepts JJCoin payments", True),
+            ("Unknown billionaire backs JJCoin", True),
+            ("JJCoin network upgrade goes live ahead of schedule", True),
+            ("Regulator launches investigation into JJCoin", False),
+            ("JJCoin suffers 51% attack scare", False),
+            ("JJCoin mining farm seized in crackdown", False),
+            ("Anonymous hacker dumps JJCoin holdings", False),
+            ("JJCoin network upgrade postponed indefinitely", False)
+        }
+    End Sub
+
+    Private Sub newsTimer_Tick(sender As Object, e As EventArgs) Handles newsTimer.Tick
+        GenerateNews()
+        RandomizeInterval()
+    End Sub
+
+    Private Sub RandomizeInterval()
+        Dim wait = 15000 + (rng.Next(-6000, 6001) + rng.Next(-6000, 6001))
+        newsTimer.Interval = Math.Max(1000, Math.Min(30000, wait))
+    End Sub
+
+    Private Sub GenerateNews()
+        Dim template = newsTemplates(rng.Next(newsTemplates.Count))
+
+        Dim strength = 0.5 + rng.NextDouble() * 1.5
+        Dim direction = If(template.good, 1.0, -1.0)
+        newsPressure = direction * strength
+
+        recentNews.Insert(0, template.headline)
+        If recentNews.Count > 3 Then recentNews.RemoveAt(recentNews.Count - 1)
+
+        PushNews()
+    End Sub
+
+    Public Function NewsDrift() As Double
+        Dim drift = newsPressure
+        newsPressure *= newsDecay
+        Return drift
+    End Function
+
+    Private Sub PushNews()
+        webView.CoreWebView2.ExecuteScriptAsync($"setNews({System.Text.Json.JsonSerializer.Serialize(recentNews)})")
     End Sub
 
 #End Region
@@ -128,6 +192,7 @@ Public Class Form1
             .Navigate("https://app.local/index.html")
         End With
         ChartTimer.Start()
+        NewsStart()
     End Sub
 
 #End Region
