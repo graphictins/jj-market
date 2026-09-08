@@ -8,6 +8,10 @@ c.width = 800; c.height = 480;
 function send(a) { window.chrome.webview.postMessage({ action: a }); }
 function showResult(t) { document.getElementById('result').textContent = t; }
 function setPrice(v) { document.getElementById('jjcoin-price').textContent = Number(v).toFixed(2); }
+function setPortfolio(cash, jjcoin) {
+    document.getElementById('cash').textContent = cash;
+    document.getElementById('jjcoin').textContent = jjcoin;
+}
 
 function drawData(p) {
     if (p.length) {

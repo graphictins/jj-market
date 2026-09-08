@@ -21,6 +21,10 @@ Public Class Form1
         If prices.Count > 100 Then prices.RemoveAt(0)
     End Sub
 
+    Private Function FormatWithCommas(n As Double) As String
+        Return n.ToString("N0", Global.System.Globalization.CultureInfo.InvariantCulture)
+    End Function
+
     ' --- html button binding (output-end only: direct webView call is fine) ---
     Public Sub HandleAction(action As String)
         If action = "greet" Then
@@ -52,6 +56,7 @@ Public Class Form1
         NextTick()
         webView.CoreWebView2.ExecuteScriptAsync($"drawData([{String.Join(",", prices)}])")
         webView.CoreWebView2.ExecuteScriptAsync($"setPrice({jjcoinPrice.ToString(System.Globalization.CultureInfo.InvariantCulture)})")
+        webView.CoreWebView2.ExecuteScriptAsync($"setPortfolio('{FormatWithCommas(save.Cash)}', '{FormatWithCommas(save.JJCoin)}')")
     End Sub
 
     ' the html "Say Hello" button comes through here (receive-only)
