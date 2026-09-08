@@ -14,6 +14,11 @@
   font-style: normal;
 }
 
+.container-title {
+    font-size: 1.4rem;
+    font-weight: 900;
+}
+
 .container {
     border-radius: var(--radius-container);
     background-color: var(--color-container-bg);
