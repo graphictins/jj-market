@@ -6,7 +6,7 @@ Public Class Form1
 #Region "Logic"
 
     Private rng As New Random
-    Private price As Double = 100.0
+    Private jjcoinPrice As Double = 100.0
     Private prices As New List(Of Double)
 
     Private Sub Seed()
@@ -16,8 +16,8 @@ Public Class Form1
     End Sub
 
     Private Sub NextTick()
-        price += (rng.NextDouble() - 0.5) * 2
-        prices.Add(price)
+        jjcoinPrice += (rng.NextDouble() - 0.5) * 2
+        prices.Add(jjcoinPrice)
         If prices.Count > 100 Then prices.RemoveAt(0)
     End Sub
 
@@ -42,7 +42,7 @@ Public Class Form1
 
         If save.Prices IsNot Nothing AndAlso save.Prices.Count > 0 Then
             prices = save.Prices
-            price = prices(prices.Count - 1)
+            jjcoinPrice = prices(prices.Count - 1)
         Else
             Seed()
         End If
@@ -51,6 +51,7 @@ Public Class Form1
     Private Sub ChartTimer_Tick(sender As Object, e As EventArgs) Handles ChartTimer.Tick
         NextTick()
         webView.CoreWebView2.ExecuteScriptAsync($"drawData([{String.Join(",", prices)}])")
+        webView.CoreWebView2.ExecuteScriptAsync($"setPrice({jjcoinPrice.ToString(System.Globalization.CultureInfo.InvariantCulture)})")
     End Sub
 
     ' the html "Say Hello" button comes through here (receive-only)
