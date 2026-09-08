@@ -3,44 +3,62 @@ Imports Microsoft.Web.WebView2.Core
 
 Public Class Form1
     Private WithEvents webView As New Microsoft.Web.WebView2.WinForms.WebView2 With {.Dock = DockStyle.Fill}
-    Private ReadOnly routes As New Dictionary(Of String, Action(Of String))
+    Private WithEvents ChartTimer As New Timer With {.Interval = 500}
+
+    Private rng As New Random
+    Private price As Double = 100.0
+    Private prices As New List(Of Double)
+    Private save As SaveData = GameData.Load()
 
     Public Sub New()
         InitializeComponent()
         Controls.Add(webView)
 
-        ' ── Register actions (add new actions here) ──
-        routes("greet") = Sub(data)
-            CallJS($"showResult('Hello from VB!')")
-        End Sub
+        If save.Prices IsNot Nothing AndAlso save.Prices.Count > 0 Then
+            prices = save.Prices
+            price = prices(prices.Count - 1)
+        Else
+            For i = 1 To 60
+                price += (rng.NextDouble() - 0.5) * 2
+                prices.Add(price)
+            Next
+        End If
+    End Sub
 
+    Private Sub ChartTimer_Tick(sender As Object, e As EventArgs) Handles ChartTimer.Tick
+        price += (rng.NextDouble() - 0.5) * 2
+        prices.Add(price)
+        If prices.Count > 100 Then prices.RemoveAt(0)
+        webView.CoreWebView2.ExecuteScriptAsync($"drawData([{String.Join(",", prices)}])")
+    End Sub
+
+    ' the html "Say Hello" button comes through here
+    Private Sub OnWebMessage(sender As Object, e As CoreWebView2WebMessageReceivedEventArgs)
+        Dim action = System.Text.Json.JsonDocument.Parse(e.WebMessageAsJson) _
+                     .RootElement.GetProperty("action").GetString()
+        If action = "greet" Then
+            webView.CoreWebView2.ExecuteScriptAsync("showResult('Hello from VB!')")
+        End If
+    End Sub
+
+    Private Sub Form1_Shown(sender As Object, e As EventArgs) Handles MyBase.Shown
         InitWebView()
+    End Sub
+
+    Private Sub Form1_FormClosing(sender As Object, e As FormClosingEventArgs) Handles MyBase.FormClosing
+        save.Prices = prices
+        GameData.Save(save)
     End Sub
 
     Private Async Sub InitWebView()
         Await webView.EnsureCoreWebView2Async(Nothing)
-        webView.CoreWebView2.SetVirtualHostNameToFolderMapping(
-            "app.local",
-            Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "web"),
-            CoreWebView2HostResourceAccessKind.Allow)
-        AddHandler webView.CoreWebView2.WebMessageReceived, AddressOf OnMsg
-        webView.CoreWebView2.Navigate("https://app.local/index.html")
-    End Sub
-
-    Private Sub OnMsg(sender As Object, e As CoreWebView2WebMessageReceivedEventArgs)
-        Dim root = System.Text.Json.JsonDocument.Parse(e.WebMessageAsJson).RootElement
-        Dim action = root.GetProperty("action").GetString()
-
-        If routes.ContainsKey(action) Then
-            Dim data = ""
-            If root.TryGetProperty("data", Nothing) Then
-                data = root.GetProperty("data").GetString()
-            End If
-            routes(action).Invoke(data)
-        End If
-    End Sub
-
-    Private Sub CallJS(script As String)
-        webView.CoreWebView2.ExecuteScriptAsync(script)
+        AddHandler webView.CoreWebView2.WebMessageReceived, AddressOf OnWebMessage
+        With webView.CoreWebView2
+            .SetVirtualHostNameToFolderMapping("app.local",
+                Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "web"),
+                CoreWebView2HostResourceAccessKind.Allow)
+            .Navigate("https://app.local/index.html")
+        End With
+        ChartTimer.Start()
     End Sub
 End Class
