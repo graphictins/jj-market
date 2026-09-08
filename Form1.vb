@@ -9,6 +9,10 @@ Public Class Form1
     Private jjcoinPrice As Double = 100.0
     Private prices As New List(Of Double)
 
+    Private targetPrice As Double = 100.0
+    Private noiseStrength As Double = 1.5
+    Private pullStrength As Double = 0.03
+
     Private Sub Seed()
         For i = 1 To 60
             NextTick()
@@ -16,7 +20,8 @@ Public Class Form1
     End Sub
 
     Private Sub NextTick()
-        jjcoinPrice += (rng.NextDouble() - 0.5) * 2
+        Dim pull = (targetPrice - jjcoinPrice) * pullStrength
+        jjcoinPrice += pull + (rng.NextDouble() - 0.5) * 2 * noiseStrength
         prices.Add(jjcoinPrice)
         If prices.Count > 100 Then prices.RemoveAt(0)
     End Sub
@@ -29,7 +34,39 @@ Public Class Form1
     Public Sub HandleAction(action As String)
         If action = "greet" Then
             webView.CoreWebView2.ExecuteScriptAsync("showResult('Hello from VB!')")
+        ElseIf action = "buy" OrElse action = "sell" Then
+            Trade(action = "buy")
         End If
+    End Sub
+
+    Private Sub Trade(isBuy As Boolean)
+        Using dlg As New TradeForm(isBuy, Function() jjcoinPrice)
+            If dlg.ShowDialog(Me) = DialogResult.OK Then
+                Dim quantity = dlg.Quantity
+                Dim quantityText = quantity.ToString("0.##", Global.System.Globalization.CultureInfo.InvariantCulture)
+
+                If isBuy Then
+                    Dim cost = quantity * jjcoinPrice
+                    If cost > save.Cash Then
+                        MessageBox.Show($"Not enough cash. You need {FormatWithCommas(cost)}.")
+                        Return
+                    End If
+                    save.Cash -= cost
+                    save.JJCoin += quantity
+                    webView.CoreWebView2.ExecuteScriptAsync($"showResult('Bought {quantityText} JJCoin')")
+                Else
+                    If quantity > save.JJCoin Then
+                        MessageBox.Show("Not enough jjcoin.")
+                        Return
+                    End If
+                    save.JJCoin -= quantity
+                    save.Cash += quantity * jjcoinPrice
+                    webView.CoreWebView2.ExecuteScriptAsync($"showResult('Sold {quantityText} JJCoin')")
+                End If
+
+                PushPortfolio()
+            End If
+        End Using
     End Sub
 
 #End Region
@@ -56,7 +93,13 @@ Public Class Form1
         NextTick()
         webView.CoreWebView2.ExecuteScriptAsync($"drawData([{String.Join(",", prices)}])")
         webView.CoreWebView2.ExecuteScriptAsync($"setPrice({jjcoinPrice.ToString(System.Globalization.CultureInfo.InvariantCulture)})")
-        webView.CoreWebView2.ExecuteScriptAsync($"setPortfolio('{FormatWithCommas(save.Cash)}', '{FormatWithCommas(save.JJCoin)}')")
+        PushPortfolio()
+    End Sub
+
+    Private Sub PushPortfolio()
+        Dim jjcoinValue = save.JJCoin * jjcoinPrice
+        webView.CoreWebView2.ExecuteScriptAsync(
+            $"setPortfolio('{FormatWithCommas(save.Cash)}', '{FormatWithCommas(jjcoinValue)}', '{FormatWithCommas(save.JJCoin)}')")
     End Sub
 
     ' the html "Say Hello" button comes through here (receive-only)
