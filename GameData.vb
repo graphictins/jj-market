@@ -25,6 +25,6 @@ Public Class GameData
     Public Shared Sub Save(data As SaveData)
         Ensure()
         File.WriteAllText(Path.Combine(Dir, "save.json"),
-                          JsonSerializer.Serialize(data, New JsonSerializerOptions With {.WriteIndented = True}))
+        JsonSerializer.Serialize(data, New JsonSerializerOptions With {.WriteIndented = True}))
     End Sub
 End Class

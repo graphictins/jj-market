@@ -2,12 +2,38 @@ Imports System.IO
 Imports Microsoft.Web.WebView2.Core
 
 Public Class Form1
-    Private WithEvents webView As New Microsoft.Web.WebView2.WinForms.WebView2 With {.Dock = DockStyle.Fill}
-    Private WithEvents ChartTimer As New Timer With {.Interval = 500}
+
+#Region "Logic"
 
     Private rng As New Random
     Private price As Double = 100.0
     Private prices As New List(Of Double)
+
+    Private Sub Seed()
+        For i = 1 To 60
+            NextTick()
+        Next
+    End Sub
+
+    Private Sub NextTick()
+        price += (rng.NextDouble() - 0.5) * 2
+        prices.Add(price)
+        If prices.Count > 100 Then prices.RemoveAt(0)
+    End Sub
+
+    ' --- html button binding (output-end only: direct webView call is fine) ---
+    Public Sub HandleAction(action As String)
+        If action = "greet" Then
+            webView.CoreWebView2.ExecuteScriptAsync("showResult('Hello from VB!')")
+        End If
+    End Sub
+
+#End Region
+
+#Region "Driver"
+
+    Private WithEvents webView As New Microsoft.Web.WebView2.WinForms.WebView2 With {.Dock = DockStyle.Fill}
+    Private WithEvents ChartTimer As New Timer With {.Interval = 500}
     Private save As SaveData = GameData.Load()
 
     Public Sub New()
@@ -18,27 +44,20 @@ Public Class Form1
             prices = save.Prices
             price = prices(prices.Count - 1)
         Else
-            For i = 1 To 60
-                price += (rng.NextDouble() - 0.5) * 2
-                prices.Add(price)
-            Next
+            Seed()
         End If
     End Sub
 
     Private Sub ChartTimer_Tick(sender As Object, e As EventArgs) Handles ChartTimer.Tick
-        price += (rng.NextDouble() - 0.5) * 2
-        prices.Add(price)
-        If prices.Count > 100 Then prices.RemoveAt(0)
+        NextTick()
         webView.CoreWebView2.ExecuteScriptAsync($"drawData([{String.Join(",", prices)}])")
     End Sub
 
-    ' the html "Say Hello" button comes through here
+    ' the html "Say Hello" button comes through here (receive-only)
     Private Sub OnWebMessage(sender As Object, e As CoreWebView2WebMessageReceivedEventArgs)
         Dim action = System.Text.Json.JsonDocument.Parse(e.WebMessageAsJson) _
                      .RootElement.GetProperty("action").GetString()
-        If action = "greet" Then
-            webView.CoreWebView2.ExecuteScriptAsync("showResult('Hello from VB!')")
-        End If
+        HandleAction(action)
     End Sub
 
     Private Sub Form1_Shown(sender As Object, e As EventArgs) Handles MyBase.Shown
@@ -61,4 +80,7 @@ Public Class Form1
         End With
         ChartTimer.Start()
     End Sub
+
+#End Region
+
 End Class
