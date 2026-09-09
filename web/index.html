@@ -1,61 +1,180 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:opsz,wght@6..144,1..1000&family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Momo+Trust+Display&family=Roboto+Mono:ital,wght@0,100..700;1,100..700&family=Roboto:ital,wght@0,100..900;1,100..900&family=Rubik:ital,wght@0,300..900;1,300..900&display=swap" rel="stylesheet">
-
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title> core ui </title>
+    <title>JJMarket — Terminal</title>
     <link rel="stylesheet" href="style.css">
-    
 </head>
 <body>
 
-    <div class="container-left ">
-        <div class="container-top container">
-
-            <p class="roboto-mono container-title">Market</p>
-            <p class="roboto-mono">jjcoin: <span id="jjcoin-price">–</span></p>
-
+    <!-- ===================== Ticker tape ===================== -->
+    <header class="ticker-bar">
+        <div class="ticker-left">
+            <span class="live-dot" id="live-dot"></span>
+            <span class="symbol">JJCOIN</span>
+            <span class="symbol-pair">/ USDT</span>
+            <span class="ticker-sep">·</span>
+            <span class="price-big" id="ticker-price">–</span>
+            <span class="change" id="ticker-change">–</span>
         </div>
-        <div class="container-bottom container">
-
-            <p class="roboto-mono container-title">News</p>
-            <div id="news-list"></div>
-        
+        <div class="ticker-stats">
+            <div class="stat">
+                <span class="stat-label">24h High</span>
+                <span class="stat-value" id="stat-high">–</span>
+            </div>
+            <div class="stat">
+                <span class="stat-label">24h Low</span>
+                <span class="stat-value" id="stat-low">–</span>
+            </div>
+            <div class="stat">
+                <span class="stat-label">24h Vol</span>
+                <span class="stat-value" id="stat-vol">–</span>
+            </div>
+            <div class="stat">
+                <span class="stat-label">24h Range</span>
+                <span class="stat-value" id="stat-range">–</span>
+            </div>
         </div>
-    </div>
+    </header>
 
-    <div class="container-center container">
-        <canvas id="chart"></canvas>
-        <div class="chart-controls">
-            <p id="result" class="roboto-mono"></p>
-            <button onclick="send('greet')">Say Hello</button>
-        </div>
-    </div>
+    <!-- ===================== Main grid ===================== -->
+    <main class="main-grid">
 
-    <div class="container-right ">
-        <div class="container-top container">
+        <!-- ---------- Left: order book ---------- -->
+        <section class="panel panel-book" id="left-panel">
+            <div class="panel-head">
+                <span class="panel-title">Order Book</span>
+                <span class="panel-spread" id="book-spread">spread –</span>
+            </div>
+            <div class="book-ladder">
+                <div class="book-row book-head">
+                    <span>Price</span><span>Qty</span><span class="ta-r">Total</span>
+                </div>
+                <div id="book-asks" class="book-asks"></div>
+                <div class="book-mid" id="book-mid"></div>
+                <div id="book-bids" class="book-bids"></div>
+            </div>
+        </section>
 
-            <p class="roboto-mono container-title">Portfolio</p>
-            <p class="roboto-mono">cash: <span id="cash">–</span></p>
-            <p class="roboto-mono">jjcoin worth: <span id="jjcoin">–</span></p>
-            <p class="roboto-mono">jjcoin amount: <span id="jjcoin-amount">–</span></p>
+        <!-- ---------- Center: chart ---------- -->
+        <section class="panel panel-chart" id="center-panel">
+            <div class="panel-head chart-head">
+                <div class="tf-tabs" id="tf-tabs">
+                    <button class="tf-btn active" data-tf="0">5s</button>
+                    <button class="tf-btn" data-tf="1">15s</button>
+                    <button class="tf-btn" data-tf="2">30s</button>
+                    <button class="tf-btn" data-tf="3">1m</button>
+                </div>
+                <div class="ct-tabs" id="ct-tabs">
+                    <button class="ct-btn active" data-ct="candle">Candles</button>
+                    <button class="ct-btn" data-ct="line">Line</button>
+                    <button class="ct-btn" data-ct="area">Area</button>
+                </div>
+            </div>
+            <div id="chart" class="chart-host"></div>
+            <div class="chart-fallback" id="chart-result"></div>
+        </section>
 
-        </div>
-        <div class="container-bottom container">
+        <!-- ---------- Right: trade + portfolio ---------- -->
+        <section class="panel panel-trade" id="right-panel">
 
-            <p class="roboto-mono container-title">Trade</p>
-            <button class="roboto-mono" onclick="send('buy')">buy</button>
-            <button class="roboto-mono" onclick="send('sell')">sell</button>
+            <!-- Trade entry -->
+            <div class="panel-head"><span class="panel-title">Trade</span></div>
+            <div class="order-type">
+                <button class="otype-btn market active" data-otype="market">Market</button>
+                <button class="otype-btn limit" data-otype="limit">Limit</button>
+            </div>
 
-        </div>
-    </div>
+            <div class="trade-row price-row">
+                <span class="trade-label">Price</span>
+                <span class="trade-value" id="trade-price">–</span>
+            </div>
+            <div class="trade-row limit-row hidden">
+                <span class="trade-label">Limit Price</span>
+                <input id="limit-price" class="input mon" placeholder="0.00" inputmode="decimal">
+            </div>
 
+            <div class="trade-row">
+                <span class="trade-label">Amount (JJCOIN)</span>
+                <input id="qty" class="input mon" value="10" inputmode="decimal">
+            </div>
+            <div class="trade-row avail-row">
+                <span class="trade-label">Available</span>
+                <span class="trade-value">
+                    <span id="avail-qty" class="mon">0</span> JJCOIN
+                    <span class="dim">/</span>
+                    <span id="avail-cash" class="mon">0</span> USDT
+                </span>
+            </div>
+            <div class="trade-row total-row">
+                <span class="trade-label">Total</span>
+                <span class="trade-value mon" id="trade-total">0.00</span>
+            </div>
+
+            <div class="buy-sell">
+                <button class="trade-btn buy" id="btn-buy">Buy / Long</button>
+                <button class="trade-btn sell" id="btn-sell">Sell / Short</button>
+            </div>
+            <div class="trade-row">
+                <span class="trade-label">With 10x leverage</span>
+                <span class="trade-value mon" id="trade-total-lev">0.00</span>
+            </div>
+
+            <div class="result-line mon" id="result"></div>
+
+            <!-- Portfolio -->
+            <div class="panel-head sub"><span class="panel-title">Portfolio</span></div>
+            <div class="pf-grid">
+                <div class="pf-cell">
+                    <span class="pf-label">Total Equity</span>
+                    <span class="pf-value mon" id="pf-equity">–</span>
+                </div>
+                <div class="pf-cell">
+                    <span class="pf-label">Cash</span>
+                    <span class="pf-value mon" id="pf-cash">–</span>
+                </div>
+                <div class="pf-cell">
+                    <span class="pf-label">Holdings</span>
+                    <span class="pf-value mon" id="pf-holding">–</span>
+                </div>
+                <div class="pf-cell">
+                    <span class="pf-label">Holding Value</span>
+                    <span class="pf-value mon" id="pf-holding-worth">–</span>
+                </div>
+                <div class="pf-cell">
+                    <span class="pf-label">Unrealized P/L</span>
+                    <span class="pf-value mon" id="pf-pnl">–</span>
+                </div>
+                <div class="pf-cell">
+                    <span class="pf-label">Avg Cost</span>
+                    <span class="pf-value mon" id="pf-avgcost">–</span>
+                </div>
+            </div>
+
+            <!-- Open orders -->
+            <div class="panel-head sub"><span class="panel-title">Open Orders</span></div>
+            <div class="orders-list" id="orders-list">
+                <div class="empty-row">No open orders</div>
+            </div>
+
+            <!-- Trade history -->
+            <div class="panel-head sub"><span class="panel-title">Trade History</span></div>
+            <div class="history-list" id="history-list">
+                <div class="empty-row">No trades yet</div>
+            </div>
+
+        </section>
+
+    </main>
+
+    <!-- ===================== News ticker ===================== -->
+    <footer class="news-ticker">
+        <span class="news-badge">NEWS</span>
+        <div class="news-track" id="news-track"></div>
+    </footer>
+
+    <script src="lwc/lightweight-charts.standalone.production.js"></script>
     <script src="script.js"></script>
-
 </body>
 </html>

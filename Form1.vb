@@ -1,4 +1,5 @@
 Imports System.IO
+Imports System.Linq
 Imports Microsoft.Web.WebView2.Core
 
 Public Class Form1
@@ -14,7 +15,7 @@ Public Class Form1
     Private pullStrength As Double = 0.03
 
     Private Sub Seed()
-        For i = 1 To 60
+        For i = 1 To 12000
             NextTick()
         Next
     End Sub
@@ -23,48 +24,128 @@ Public Class Form1
         Dim pull = (targetPrice - jjcoinPrice) * pullStrength
         jjcoinPrice += pull + (rng.NextDouble() - 0.5) * 2 * noiseStrength + NewsDrift()
         prices.Add(jjcoinPrice)
-        If prices.Count > 100 Then prices.RemoveAt(0)
+        If prices.Count > 13000 Then prices.RemoveAt(0)
     End Sub
 
     Private Function FormatWithCommas(n As Double) As String
         Return n.ToString("N0", Global.System.Globalization.CultureInfo.InvariantCulture)
     End Function
 
-    ' --- html button binding (output-end only: direct webView call is fine) ---
-    Public Sub HandleAction(action As String)
-        If action = "greet" Then
-            webView.CoreWebView2.ExecuteScriptAsync("showResult('Hello from VB!')")
-        ElseIf action = "buy" OrElse action = "sell" Then
-            Trade(action = "buy")
+    Private Function FmtPrice(n As Double) As String
+        Return n.ToString("N2", Global.System.Globalization.CultureInfo.InvariantCulture)
+    End Function
+
+    Private Function FmtQty(n As Double) As String
+        Return n.ToString("0.##", Global.System.Globalization.CultureInfo.InvariantCulture)
+    End Function
+
+    ' Receive-only endpoint for html buttons.
+    Public Sub HandleAction(action As String, qty As Double, limit As Double?)
+        Select Case action
+            Case "bootstrap"
+                PushHistory()
+                PushPortfolio()
+                PushTrades()
+                PushOrders()
+                PushNews()
+            Case "greet"
+                webView.CoreWebView2.ExecuteScriptAsync("showResult('Hello from VB!')")
+            Case "buy", "sell"
+                Dim isBuy = action = "buy"
+                If qty > 0 AndAlso limit.HasValue Then
+                    PlaceLimitOrder(isBuy, qty, limit.Value)
+                ElseIf qty > 0 Then
+                    Dim sideTxt = If(isBuy, "Buy", "Sell")
+                    If ExecuteOrder(isBuy, qty, jjcoinPrice) Then
+                        webView.CoreWebView2.ExecuteScriptAsync(
+                            $"showResult('OK: Market {sideTxt} filled {FmtQty(qty)} @ {FmtPrice(jjcoinPrice)}')")
+                    Else
+                        webView.CoreWebView2.ExecuteScriptAsync(
+                            $"showResult('ERR: Not enough {(If(isBuy, "cash", "jjcoin"))}')")
+                    End If
+                Else
+                    Trade(isBuy)
+                End If
+        End Select
+    End Sub
+
+    ' Shared execution path: funds check, account update, history record, push.
+    Private Function ExecuteOrder(isBuy As Boolean, quantity As Double, price As Double) As Boolean
+        If isBuy Then
+            Dim cost = quantity * price
+            If cost > save.Cash Then Return False
+            save.Cash -= cost
+            save.JJCoin += quantity
+        Else
+            If quantity > save.JJCoin Then Return False
+            save.JJCoin -= quantity
+            save.Cash += quantity * price
+        End If
+
+        save.TradeHistory.Insert(0, New TradeRecord With {
+            .Time = DateTime.Now.ToString("MM-dd HH:mm:ss"),
+            .Side = If(isBuy, "buy", "sell"),
+            .Qty = quantity,
+            .Price = price,
+            .Total = quantity * price
+        })
+        If save.TradeHistory.Count > 200 Then save.TradeHistory.RemoveAt(save.TradeHistory.Count - 1)
+
+        PushPortfolio()
+        PushTrades()
+        Return True
+    End Function
+
+    Private Sub PlaceLimitOrder(isBuy As Boolean, quantity As Double, limitPrice As Double)
+        save.OpenOrders.Add(New PendingOrder With {
+            .Id = save.NextOrderId,
+            .IsBuy = isBuy,
+            .Quantity = quantity,
+            .LimitPrice = limitPrice
+        })
+        save.NextOrderId += 1
+        PushOrders()
+        Dim sideTxt = If(isBuy, "Buy", "Sell")
+        webView.CoreWebView2.ExecuteScriptAsync($"showResult('OK: {sideTxt} limit @ {FmtPrice(limitPrice)} placed')")
+    End Sub
+
+    Private Sub CancelOrder(orderId As Long)
+        Dim target = save.OpenOrders.FirstOrDefault(Function(o) o.Id = orderId)
+        If target IsNot Nothing Then
+            save.OpenOrders.Remove(target)
+            PushOrders()
+            webView.CoreWebView2.ExecuteScriptAsync($"showResult('OK: Order #{orderId} cancelled')")
         End If
     End Sub
 
+    Private Sub CheckPendingOrders()
+        Dim removed As Boolean = False
+        For Each o In save.OpenOrders.ToList()
+            Dim fill = (o.IsBuy AndAlso jjcoinPrice <= o.LimitPrice) OrElse
+                       ((Not o.IsBuy) AndAlso jjcoinPrice >= o.LimitPrice)
+            If fill Then
+                save.OpenOrders.Remove(o)
+                removed = True
+                Dim sideTxt = If(o.IsBuy, "Buy", "Sell")
+                If ExecuteOrder(o.IsBuy, o.Quantity, o.LimitPrice) Then
+                    webView.CoreWebView2.ExecuteScriptAsync(
+                        $"showResult('OK: {sideTxt} limit filled {FmtQty(o.Quantity)} @ {FmtPrice(o.LimitPrice)}')")
+                End If
+            End If
+        Next
+        If removed Then PushOrders()
+    End Sub
+
+    ' Legacy path: quantity entered via WinForms dialog.
     Private Sub Trade(isBuy As Boolean)
         Using dlg As New TradeForm(isBuy, Function() jjcoinPrice)
             If dlg.ShowDialog(Me) = DialogResult.OK Then
-                Dim quantity = dlg.Quantity
-                Dim quantityText = quantity.ToString("0.##", Global.System.Globalization.CultureInfo.InvariantCulture)
-
-                If isBuy Then
-                    Dim cost = quantity * jjcoinPrice
-                    If cost > save.Cash Then
-                        MessageBox.Show($"Not enough cash. You need {FormatWithCommas(cost)}.")
-                        Return
-                    End If
-                    save.Cash -= cost
-                    save.JJCoin += quantity
-                    webView.CoreWebView2.ExecuteScriptAsync($"showResult('Bought {quantityText} JJCoin')")
+                Dim sideTxt = If(isBuy, "Buy", "Sell")
+                If ExecuteOrder(isBuy, dlg.Quantity, jjcoinPrice) Then
+                    webView.CoreWebView2.ExecuteScriptAsync($"showResult('OK: {sideTxt} {FmtQty(dlg.Quantity)} JJCOIN')")
                 Else
-                    If quantity > save.JJCoin Then
-                        MessageBox.Show("Not enough jjcoin.")
-                        Return
-                    End If
-                    save.JJCoin -= quantity
-                    save.Cash += quantity * jjcoinPrice
-                    webView.CoreWebView2.ExecuteScriptAsync($"showResult('Sold {quantityText} JJCoin')")
+                    MessageBox.Show(If(isBuy, "Not enough cash.", "Not enough jjcoin."))
                 End If
-
-                PushPortfolio()
             End If
         End Using
     End Sub
@@ -148,6 +229,10 @@ Public Class Form1
         If save.Prices IsNot Nothing AndAlso save.Prices.Count > 0 Then
             prices = save.Prices
             jjcoinPrice = prices(prices.Count - 1)
+            ' top up so even the highest timeframe has a full chart immediately
+            While prices.Count < 5000
+                NextTick()
+            End While
         Else
             Seed()
         End If
@@ -155,9 +240,14 @@ Public Class Form1
 
     Private Sub ChartTimer_Tick(sender As Object, e As EventArgs) Handles ChartTimer.Tick
         NextTick()
-        webView.CoreWebView2.ExecuteScriptAsync($"drawData([{String.Join(",", prices)}])")
-        webView.CoreWebView2.ExecuteScriptAsync($"setPrice({jjcoinPrice.ToString(System.Globalization.CultureInfo.InvariantCulture)})")
+        CheckPendingOrders()
+        webView.CoreWebView2.ExecuteScriptAsync($"appendPrice({jjcoinPrice.ToString(Global.System.Globalization.CultureInfo.InvariantCulture)})")
+        webView.CoreWebView2.ExecuteScriptAsync($"setPrice({jjcoinPrice.ToString(Global.System.Globalization.CultureInfo.InvariantCulture)})")
         PushPortfolio()
+    End Sub
+
+    Private Sub PushHistory()
+        webView.CoreWebView2.ExecuteScriptAsync($"drawData([{String.Join(",", prices)}])")
     End Sub
 
     Private Sub PushPortfolio()
@@ -166,11 +256,38 @@ Public Class Form1
             $"setPortfolio('{FormatWithCommas(save.Cash)}', '{FormatWithCommas(jjcoinValue)}', '{FormatWithCommas(save.JJCoin)}')")
     End Sub
 
-    ' the html "Say Hello" button comes through here (receive-only)
+    Private Sub PushTrades()
+        Dim payload = save.TradeHistory.Select(Function(t) New With {
+            .time = t.Time, .side = t.Side, .qty = t.Qty, .price = t.Price, .total = t.Total
+        })
+        webView.CoreWebView2.ExecuteScriptAsync($"setTrades({System.Text.Json.JsonSerializer.Serialize(payload)})")
+    End Sub
+
+    Private Sub PushOrders()
+        Dim payload = save.OpenOrders.Select(Function(o) New With {
+            .id = o.Id, .side = If(o.IsBuy, "buy", "sell"), .qty = o.Quantity, .limit = o.LimitPrice
+        })
+        webView.CoreWebView2.ExecuteScriptAsync($"setOrders({System.Text.Json.JsonSerializer.Serialize(payload)})")
+    End Sub
+
     Private Sub OnWebMessage(sender As Object, e As CoreWebView2WebMessageReceivedEventArgs)
-        Dim action = System.Text.Json.JsonDocument.Parse(e.WebMessageAsJson) _
-                     .RootElement.GetProperty("action").GetString()
-        HandleAction(action)
+        Dim root = System.Text.Json.JsonDocument.Parse(e.WebMessageAsJson).RootElement
+        Dim action = root.GetProperty("action").GetString()
+
+        Dim qty As Double = 0
+        Dim qtyElem As System.Text.Json.JsonElement
+        If root.TryGetProperty("qty", qtyElem) Then qty = qtyElem.GetDouble()
+
+        Dim limit As Double? = Nothing
+        Dim limitElem As System.Text.Json.JsonElement
+        If root.TryGetProperty("limit", limitElem) Then limit = limitElem.GetDouble()
+
+        If action = "cancel" Then
+            Dim idElem As System.Text.Json.JsonElement
+            If root.TryGetProperty("id", idElem) Then CancelOrder(idElem.GetInt64())
+        Else
+            HandleAction(action, qty, limit)
+        End If
     End Sub
 
     Private Sub Form1_Shown(sender As Object, e As EventArgs) Handles MyBase.Shown
